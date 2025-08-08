@@ -1,0 +1,248 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-queenbooks",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-start",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "queenbooks-search"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:3000/buscar-produto",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-queenbooks",
+      "name": "QueenBooks API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-success",
+              "leftValue": "={{ $json.sucesso }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-success",
+      "name": "Product Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "product_id",
+              "value": "={{ $json.produto.id }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.produto.titulo }}"
+            },
+            {
+              "name": "isbn",
+              "value": "={{ $json.produto.codigo_isbn }}"
+            },
+            {
+              "name": "price", 
+              "value": "={{ $json.produto.preco || 'Não informado' }}"
+            },
+            {
+              "name": "category",
+              "value": "={{ $json.produto.categoria_sugerida }}"
+            },
+            {
+              "name": "dropshipping_suitable",
+              "value": "={{ $json.produto.dropshipping.adequado_dropshipping }}"
+            },
+            {
+              "name": "margin_suggestion",
+              "value": "={{ $json.produto.dropshipping.margem_sugerida }}"
+            },
+            {
+              "name": "target_audience",
+              "value": "={{ $json.produto.dropshipping.publico_alvo }}"
+            },
+            {
+              "name": "competition_level",
+              "value": "={{ $json.produto.dropshipping.nivel_concorrencia }}"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.produto.url_produto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-success",
+      "name": "Format Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [800, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "error",
+              "value": "Product not found"
+            },
+            {
+              "name": "requested_id",
+              "value": "={{ $json.id || 'unknown' }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.mensagem || 'Product not found in QueenBooks database' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-error",
+      "name": "Format Error Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [800, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "webhook-response",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.webhookResponse",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "QueenBooks API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QueenBooks API": {
+      "main": [
+        [
+          {
+            "node": "Product Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product Found?": {
+      "main": [
+        [
+          {
+            "node": "Format Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success Response": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Response": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2025-07-13T18:19:00.000Z",
+  "id": "queenbooks-integration",
+  "meta": {
+    "templateId": "queenbooks-product-search"
+  },
+  "name": "QueenBooks Product Search Integration",
+  "staticData": {},
+  "tags": [
+    {
+      "createdAt": "2025-07-13T18:19:00.000Z", 
+      "id": "queenbooks",
+      "name": "QueenBooks",
+      "updatedAt": "2025-07-13T18:19:00.000Z"
+    }
+  ],
+  "updatedAt": "2025-07-13T18:19:00.000Z",
+  "versionId": "1"
+}

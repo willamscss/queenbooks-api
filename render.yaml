@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: queenbooks-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server-simple.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000

@@ -1,0 +1,37 @@
+{
+  "name": "queenbooks-monitor",
+  "version": "1.0.0",
+  "description": "Sistema prático de monitoramento de produtos QueenBooks para dropshipping",
+  "main": "dropshipping.js",
+  "scripts": {
+    "start": "node server-persistent.js",
+    "demo": "node dropshipping.js",
+    "search": "node dropshipping.js search",
+    "report": "node dropshipping.js report",
+    "export": "node dropshipping.js export-csv",
+    "server": "node src/index.js",
+    "n8n": "node server-simple.js",
+    "api": "node server-simple.js",
+    "enhanced": "node server-enhanced.js",
+    "persistent": "node server-persistent.js",
+    "test-auth": "node teste-auth.js",
+    "production": "./start-production.sh"
+  },
+  "keywords": [
+    "dropshipping",
+    "queenbooks",
+    "produtos",
+    "monitoramento"
+  ],
+  "dependencies": {
+    "axios": "^1.10.0",
+    "cheerio": "^1.1.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
+    "puppeteer": "^24.16.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

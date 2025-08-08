@@ -1,0 +1,407 @@
+#!/usr/bin/env node
+
+/**
+ * ASSISTENTE MANUAL QUEENBOOKS - ESTRUTURA REAL
+ * 
+ * Baseado na descoberta da estrutura real:
+ * - Busca: https://www.queenbooks.com.br/?busca=[CÓDIGO]
+ * - Produto: https://www.queenbooks.com.br/produtos/[ID]
+ */
+
+const fs = require('fs-extra');
+const path = require('path');
+
+class QueenBooksAssistenteManual {
+  constructor() {
+    this.dataDir = './data/assistente-manual';
+    this.productsFile = './data/products/manual_products.json';
+  }
+
+  async init() {
+    await fs.ensureDir(this.dataDir);
+    await fs.ensureDir('./data/products');
+  }
+
+  async criarAssistenteProduto(codigo) {
+    console.log('🎯 ASSISTENTE MANUAL QUEENBOOKS');
+    console.log('=' .repeat(60));
+    console.log(`📋 Código do produto: ${codigo}`);
+    console.log('');
+
+    const urlBusca = `https://www.queenbooks.com.br/?busca=${codigo}`;
+    
+    console.log('📍 PASSO A PASSO DETALHADO:');
+    console.log('=' .repeat(40));
+    
+    console.log('\n1️⃣ ACESSE A PÁGINA DE BUSCA:');
+    console.log(`🔗 ${urlBusca}`);
+    console.log('');
+
+    console.log('2️⃣ PROCURE O PRODUTO:');
+    console.log('   • Produto deve aparecer nos resultados');
+    console.log('   • Procure pelo código ou título similar');
+    console.log('   • Se não aparecer, produto pode não existir');
+    console.log('');
+
+    console.log('3️⃣ CLIQUE NO PRODUTO:');
+    console.log('   • Clique na imagem ou título do produto');
+    console.log('   • Você será redirecionado para URL como:');
+    console.log('   • https://www.queenbooks.com.br/produtos/[NÚMERO_ID]');
+    console.log('   • Exemplo: https://www.queenbooks.com.br/produtos/211042616');
+    console.log('');
+
+    console.log('4️⃣ COLETE OS DADOS NA PÁGINA DO PRODUTO:');
+    console.log('');
+
+    // Criar template estruturado
+    const template = await this.criarTemplateEstruturado(codigo, urlBusca);
+    
+    console.log('📄 TEMPLATE CRIADO PARA PREENCHIMENTO:');
+    console.log(`📁 ${template.arquivo}`);
+    console.log('');
+
+    console.log('5️⃣ PREENCHA O TEMPLATE:');
+    console.log('   • Abra o arquivo JSON criado');
+    console.log('   • Substitua os valores [PREENCHER] pelos dados reais');
+    console.log('   • Salve o arquivo');
+    console.log('');
+
+    console.log('6️⃣ PROCESSE O PRODUTO:');
+    console.log(`   node assistente-manual.js processar ${template.arquivo}`);
+    console.log('');
+
+    this.exibirInstrucoesCampos();
+
+    return template;
+  }
+
+  async criarTemplateEstruturado(codigo, urlBusca) {
+    const template = {
+      // Informações básicas
+      codigo: codigo,
+      urlBusca: urlBusca,
+      urlProduto: '[PREENCHER] - https://www.queenbooks.com.br/produtos/[ID]',
+      idProduto: '[PREENCHER] - Número do ID (ex: 211042616)',
+      
+      // Dados principais
+      titulo: '[PREENCHER] - Título completo do livro',
+      preco: '[PREENCHER] - Ex: R$ 1.280,00 ou null se não visível',
+      status: '[PREENCHER] - available ou unavailable',
+      
+      // Descrição
+      descricao: '[PREENCHER] - Descrição completa do produto',
+      
+      // Imagens (array)
+      fotos: [
+        '[PREENCHER] - URL da foto 1',
+        '[PREENCHER] - URL da foto 2',
+        '[PREENCHER] - URL da foto 3'
+        // Adicione mais se necessário
+      ],
+      
+      // Informações do produto
+      informacoes: {
+        autor: '[PREENCHER] - Nome do autor',
+        editora: '[PREENCHER] - Nome da editora', 
+        isbn: '[PREENCHER] - Código ISBN',
+        paginas: '[PREENCHER] - Número de páginas',
+        ano: '[PREENCHER] - Ano de publicação',
+        idioma: '[PREENCHER] - Idioma do livro',
+        dimensoes: '[PREENCHER] - Dimensões físicas',
+        peso: '[PREENCHER] - Peso do livro'
+      },
+      
+      // Para dropshipping
+      categoria: '[PREENCHER] - Categoria do produto',
+      tags: [
+        '[PREENCHER] - tag1',
+        '[PREENCHER] - tag2', 
+        '[PREENCHER] - tag3'
+      ],
+      
+      // Análise para venda
+      dropshipping: {
+        adequado: '[PREENCHER] - true ou false',
+        margem_sugerida: '[PREENCHER] - Ex: 20-30%',
+        publico_alvo: '[PREENCHER] - Descrição do público',
+        concorrencia: '[PREENCHER] - Alta, Media, Baixa',
+        observacoes: '[PREENCHER] - Observações para venda'
+      },
+      
+      // Metadados
+      coletadoEm: new Date().toISOString(),
+      metodo: 'assistente_manual_estruturado',
+      preenchido: false
+    };
+
+    // Salvar template
+    const nomeArquivo = `template_${codigo}_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const caminhoArquivo = path.join(this.dataDir, nomeArquivo);
+    
+    await fs.writeJSON(caminhoArquivo, template, { spaces: 2 });
+    
+    return {
+      template: template,
+      arquivo: caminhoArquivo,
+      nomeArquivo: nomeArquivo
+    };
+  }
+
+  exibirInstrucoesCampos() {
+    console.log('📝 INSTRUÇÕES DETALHADAS POR CAMPO:');
+    console.log('=' .repeat(50));
+    
+    console.log('\n🔗 URL_PRODUTO:');
+    console.log('   • Copie a URL completa da página do produto');
+    console.log('   • Ex: https://www.queenbooks.com.br/produtos/211042616');
+    
+    console.log('\n🆔 ID_PRODUTO:');
+    console.log('   • Copie apenas o número da URL');
+    console.log('   • Ex: 211042616');
+    
+    console.log('\n📚 TÍTULO:');
+    console.log('   • Copie o título completo exibido na página');
+    console.log('   • Mantenha acentos e formatação original');
+    
+    console.log('\n💰 PREÇO:');
+    console.log('   • Se visível: "R$ 1.280,00"');
+    console.log('   • Se não visível: null');
+    
+    console.log('\n📊 STATUS:');
+    console.log('   • "available" - se tem botão COMPRAR/ADICIONAR');
+    console.log('   • "unavailable" - se mostra ESGOTADO/INDISPONÍVEL');
+    
+    console.log('\n🖼️  FOTOS:');
+    console.log('   • Clique direito na imagem > Copiar endereço da imagem');
+    console.log('   • Adicione múltiplas URLs se houver várias fotos');
+    console.log('   • Remova entradas [PREENCHER] não utilizadas');
+    
+    console.log('\n📋 INFORMAÇÕES:');
+    console.log('   • Procure seção "Informações do Produto"');
+    console.log('   • Ou tabela com especificações técnicas');
+    console.log('   • Preencha apenas campos disponíveis');
+    
+    console.log('\n🎯 DROPSHIPPING:');
+    console.log('   • adequado: true (se vale a pena vender)');
+    console.log('   • margem_sugerida: "15-25%" (sua margem de lucro)');
+    console.log('   • publico_alvo: quem compraria este produto');
+  }
+
+  async processarTemplatePreenchido(caminhoArquivo) {
+    try {
+      console.log('🔄 PROCESSANDO TEMPLATE PREENCHIDO');
+      console.log('=' .repeat(50));
+      
+      const produto = await fs.readJSON(caminhoArquivo);
+      
+      // Validar se foi preenchido
+      const validacao = this.validarPreenchimento(produto);
+      
+      if (!validacao.valido) {
+        console.log('❌ TEMPLATE NÃO PREENCHIDO COMPLETAMENTE:');
+        validacao.erros.forEach(erro => {
+          console.log(`   • ${erro}`);
+        });
+        console.log('');
+        console.log('📝 Edite o arquivo e preencha os campos obrigatórios');
+        return null;
+      }
+
+      // Processar e adicionar ao sistema
+      const produtoFormatado = this.formatarParaSistema(produto);
+      
+      // Adicionar ao sistema de dropshipping
+      await this.addProduct(produtoFormatado);
+      
+      // Salvar versão processada
+      const arquivoProcessado = caminhoArquivo.replace('template_', 'processado_');
+      produto.preenchido = true;
+      produto.processadoEm = new Date().toISOString();
+      await fs.writeJSON(arquivoProcessado, produto, { spaces: 2 });
+      
+      console.log('✅ PRODUTO PROCESSADO COM SUCESSO!');
+      console.log('=' .repeat(50));
+      console.log(`📚 Título: ${produto.titulo}`);
+      console.log(`🔢 Código: ${produto.codigo}`);
+      console.log(`💰 Preço: ${produto.preco}`);
+      console.log(`📊 Status: ${produto.status}`);
+      console.log(`🖼️  Fotos: ${produto.fotos.filter(f => !f.includes('[PREENCHER]')).length}`);
+      console.log(`🔗 URL: ${produto.urlProduto}`);
+      console.log('');
+      console.log('🎉 Produto adicionado ao sistema de dropshipping!');
+      
+      return produto;
+      
+    } catch (error) {
+      console.error(`❌ Erro ao processar template: ${error.message}`);
+      return null;
+    }
+  }
+
+  validarPreenchimento(produto) {
+    const erros = [];
+    const camposObrigatorios = [
+      'titulo', 'urlProduto', 'idProduto', 'status'
+    ];
+    
+    camposObrigatorios.forEach(campo => {
+      if (!produto[campo] || produto[campo].toString().includes('[PREENCHER]')) {
+        erros.push(`Campo obrigatório não preenchido: ${campo}`);
+      }
+    });
+    
+    // Validar pelo menos uma foto
+    const fotosValidas = produto.fotos.filter(foto => !foto.includes('[PREENCHER]'));
+    if (fotosValidas.length === 0) {
+      erros.push('Pelo menos uma foto deve ser preenchida');
+    }
+    
+    return {
+      valido: erros.length === 0,
+      erros: erros
+    };
+  }
+
+  formatarParaSistema(produto) {
+    return {
+      codigo: produto.codigo,
+      title: produto.titulo,
+      category: produto.categoria.replace('[PREENCHER] - ', '') || 'Manual',
+      availability: produto.status,
+      price: produto.preco === 'null' ? null : produto.preco,
+      imageUrl: produto.fotos.find(foto => !foto.includes('[PREENCHER]')) || null,
+      productLink: produto.urlProduto,
+      notes: produto.descricao.replace('[PREENCHER] - ', '') || 'Produto coletado manualmente',
+      informacoes: produto.informacoes,
+      dropshipping: produto.dropshipping
+    };
+  }
+
+  async listarTemplates() {
+    try {
+      const arquivos = await fs.readdir(this.dataDir);
+      const templates = arquivos.filter(arquivo => arquivo.startsWith('template_'));
+      
+      if (templates.length === 0) {
+        console.log('📄 Nenhum template encontrado');
+        return;
+      }
+      
+      console.log('📄 TEMPLATES DISPONÍVEIS:');
+      console.log('=' .repeat(40));
+      
+      for (const template of templates) {
+        const produto = await fs.readJSON(path.join(this.dataDir, template));
+        const status = produto.preenchido ? '✅ Preenchido' : '⏳ Pendente';
+        console.log(`${status} ${produto.codigo} - ${template}`);
+      }
+      
+    } catch (error) {
+      console.error('Erro ao listar templates:', error.message);
+    }
+  }
+
+  // Método para adicionar produtos ao sistema
+  async addProduct(produto) {
+    try {
+      // Carregar produtos existentes
+      let produtos = {};
+      if (await fs.pathExists(this.productsFile)) {
+        produtos = await fs.readJSON(this.productsFile);
+      }
+
+      // Adicionar novo produto
+      const productId = produto.code || `product_${Date.now()}`;
+      produtos[productId] = {
+        ...produto,
+        addedAt: new Date().toISOString()
+      };
+
+      // Salvar produtos atualizados
+      await fs.writeJSON(this.productsFile, produtos, { spaces: 2 });
+      
+      console.log(`✅ Produto adicionado ao sistema: ${produto.title}`);
+      return produto;
+    } catch (error) {
+      console.error('❌ Erro ao adicionar produto:', error.message);
+      throw error;
+    }
+    }
+  }
+}
+
+async function main() {
+  const comando = process.argv[2];
+  const parametro = process.argv[3];
+
+  const assistente = new QueenBooksAssistenteManual();
+  await assistente.init();
+
+  switch (comando) {
+    case 'processar':
+      if (!parametro) {
+        console.log('❌ Caminho do arquivo é obrigatório');
+        console.log('Uso: node assistente-manual.js processar [ARQUIVO.json]');
+        return;
+      }
+      await assistente.processarTemplatePreenchido(parametro);
+      break;
+
+    case 'listar':
+      await assistente.listarTemplates();
+      break;
+
+    default:
+      if (comando && comando.length > 5) {
+        // Criar assistente para código
+        await assistente.criarAssistenteProduto(comando);
+      } else {
+        console.log('❌ Uso incorreto');
+        console.log('');
+        console.log('CRIAR ASSISTENTE:');
+        console.log('  node assistente-manual.js [CÓDIGO_ISBN]');
+        console.log('  Exemplo: node assistente-manual.js 9786587141411');
+        console.log('');
+        console.log('PROCESSAR TEMPLATE:');
+        console.log('  node assistente-manual.js processar [ARQUIVO.json]');
+        console.log('');
+        console.log('LISTAR TEMPLATES:');
+        console.log('  node assistente-manual.js listar');
+        console.log('');
+      }
+      break;
+  }
+
+  // Método para adicionar produtos ao sistema
+  async addProduct(produto) {
+    try {
+      // Carregar produtos existentes
+      let produtos = {};
+      if (await fs.pathExists(this.productsFile)) {
+        produtos = await fs.readJSON(this.productsFile);
+      }
+
+      // Adicionar novo produto
+      const productId = produto.code || `product_${Date.now()}`;
+      produtos[productId] = {
+        ...produto,
+        addedAt: new Date().toISOString()
+      };
+
+      // Salvar produtos atualizados
+      await fs.writeJSON(this.productsFile, produtos, { spaces: 2 });
+      
+      console.log(`✅ Produto adicionado ao sistema: ${produto.title}`);
+      return produto;
+    } catch (error) {
+      console.error('❌ Erro ao adicionar produto:', error.message);
+      throw error;
+    }
+  }
+}
+
+if (require.main === module) {
+  main().catch(console.error);
+}
+
+module.exports = { QueenBooksAssistenteManual };
