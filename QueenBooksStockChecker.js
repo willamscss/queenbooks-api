@@ -273,92 +273,53 @@ class QueenBooksStockChecker {
       console.log(`📚 Produto: ${infoProduto.titulo || 'Sem título'}`);
       console.log(`💰 Preço: ${infoProduto.preco || 'Não disponível'}`);
 
-      // Verificar se tem campo de quantidade - seletores mais amplos
-      const campoQuantidade = await this.page.$('input[placeholder="0"]') ||
-                              await this.page.$('input[type="number"]') ||
-                              await this.page.$('input[class*="quantity"]') ||
-                              await this.page.$('input[class*="Quantity"]') ||
-                              await this.page.$('input[name*="quantity"]') ||
-                              await this.page.$('.AddToCartContainer input[type="number"]');
+      // Verificar se tem campo de quantidade - SELETOR CORRETO
+      const campoQuantidade = await this.page.$('input[type="number"][placeholder="0"]');
       
-      // Debug: Listar todos os inputs para encontrar o correto
-      const todosInputs = await this.page.evaluate(() => {
-        const inputs = Array.from(document.querySelectorAll('input'));
-        return inputs.map(input => ({
-          type: input.type,
-          placeholder: input.placeholder,
-          name: input.name,
-          className: input.className,
-          value: input.value,
-          visible: input.offsetParent !== null
-        }));
-      });
-      
-      console.log('🔍 Inputs encontrados:', JSON.stringify(todosInputs, null, 2));
+      console.log('🔍 Procurando campo de quantidade...');
       
       if (!campoQuantidade) {
-        console.log('⚠️ Campo de quantidade não encontrado - verificando se produto está disponível...');
-        
-        // Verificar se existe botão de comprar (produto disponível mas sem campo visível)
-        const temBotaoComprar = await this.page.evaluate(() => {
-          const buttons = Array.from(document.querySelectorAll('button'));
-          return buttons.some(btn => 
-            btn.textContent.toUpperCase().includes('COMPRAR') &&
-            !btn.textContent.includes('ACESSE') &&
-            !btn.disabled
-          );
-        });
-        
-        if (temBotaoComprar) {
-          console.log('✅ Produto disponível, mas sem campo de quantidade visível - assumindo estoque limitado');
-          return {
-            produtoId,
-            titulo: infoProduto.titulo,
-            preco: infoProduto.preco,
-            estoque: 1, // Assume que tem pelo menos 1 se tem botão comprar
-            disponivel: true,
-            observacao: 'Estoque não verificável - produto disponível'
-          };
-        }
-        
+        console.log('⚠️ Campo de quantidade não encontrado - produto indisponível');
         return {
           produtoId,
           titulo: infoProduto.titulo,
           preco: infoProduto.preco,
           estoque: 0,
           disponivel: false,
-          erro: 'Produto indisponível - sem campo de quantidade'
+          erro: 'Campo de quantidade não encontrado'
         };
       }
 
-      // Limpar e inserir quantidade alta
-      console.log('📝 Inserindo quantidade alta para verificar estoque...');
-      await campoQuantidade.click({ clickCount: 3 });
-      await this.page.keyboard.type('9999999');
+      console.log('✅ Campo de quantidade encontrado!');
+
+      // Limpar e inserir quantidade alta (9999999)
+      console.log('📝 Inserindo quantidade 9999999 para verificar estoque...');
+      await campoQuantidade.click({ clickCount: 3 }); // Selecionar tudo
+      await campoQuantidade.type('9999999');
       
-      // Pequena pausa
+      // Aguardar um momento
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Clicar no botão COMPRAR
+      // Clicar no botão COMPRAR específico
       console.log('🛒 Clicando no botão COMPRAR...');
       
       const clicouComprar = await this.page.evaluate(() => {
-        // Procurar botão com texto COMPRAR
+        // Seletor específico do botão COMPRAR
+        const botaoComprar = document.querySelector('button.AddToCartButton__addingProduct___1BOl7');
+        if (botaoComprar) {
+          botaoComprar.click();
+          return true;
+        }
+        
+        // Fallback: procurar por texto
         const buttons = Array.from(document.querySelectorAll('button'));
         const buyButton = buttons.find(btn => 
-          btn.textContent.toUpperCase().includes('COMPRAR') &&
-          !btn.textContent.includes('ACESSE')
+          btn.textContent.trim() === 'COMPRAR' &&
+          btn.className.includes('AddToCartButton')
         );
         
         if (buyButton) {
           buyButton.click();
-          return true;
-        }
-        
-        // Tentar seletor específico
-        const specificButton = document.querySelector('button.AddToCartButton__addingProduct___1BOl7');
-        if (specificButton) {
-          specificButton.click();
           return true;
         }
         
@@ -367,54 +328,90 @@ class QueenBooksStockChecker {
 
       if (!clicouComprar) {
         console.log('⚠️ Botão COMPRAR não encontrado');
+        return {
+          produtoId,
+          titulo: infoProduto.titulo,
+          preco: infoProduto.preco,
+          estoque: null,
+          disponivel: false,
+          erro: 'Botão COMPRAR não encontrado'
+        };
       }
+
+      console.log('✅ Clicou no botão COMPRAR');
 
       // Aguardar mensagem de estoque aparecer
       console.log('⏳ Aguardando mensagem de estoque...');
       await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Capturar mensagem de estoque
-      const mensagemEstoque = await this.page.evaluate(() => {
-        // Seletor específico principal
-        const msgEl = document.querySelector('div.AddToCartError__container___sqVVF p.AddToCartError__message___UIAEo');
-        if (msgEl) return msgEl.textContent;
+      // Capturar mensagem de estoque usando o seletor CORRETO
+      const resultadoEstoque = await this.page.evaluate(() => {
+        // Seletor específico da mensagem de estoque
+        const containerError = document.querySelector('div.AddToCartError__container___sqVVF');
+        if (containerError) {
+          const mensagemEl = containerError.querySelector('p.AddToCartError__message___UIAEo');
+          if (mensagemEl) {
+            return {
+              mensagem: mensagemEl.textContent.trim(),
+              encontrado: true
+            };
+          }
+        }
         
-        // Seletor alternativo
-        const altEl = document.querySelector('.AddToCartError__message___UIAEo');
-        if (altEl) return altEl.textContent;
-        
-        // Buscar por texto em qualquer elemento
+        // Fallback: procurar qualquer mensagem com "disponíveis"
         const allElements = document.querySelectorAll('p, div, span');
         for (let el of allElements) {
           const text = el.textContent || '';
           if (text.includes('disponíveis para compra')) {
-            return text;
+            return {
+              mensagem: text.trim(),
+              encontrado: true
+            };
           }
         }
         
-        return null;
+        return {
+          mensagem: null,
+          encontrado: false
+        };
       });
 
       let estoque = null;
-      if (mensagemEstoque) {
-        console.log(`📋 Mensagem: ${mensagemEstoque}`);
-        const match = mensagemEstoque.match(/(\d+)\s*disponíveis/i);
+      let unidadesDisponiveis = null;
+      
+      if (resultadoEstoque.encontrado && resultadoEstoque.mensagem) {
+        console.log(`📋 Mensagem de estoque: ${resultadoEstoque.mensagem}`);
+        
+        // Extrair número do padrão "X disponíveis para compra"
+        const match = resultadoEstoque.mensagem.match(/(\d+)\s*disponíveis?\s*para\s*compra/i);
         if (match) {
           estoque = parseInt(match[1]);
-          console.log(`✅ ESTOQUE ENCONTRADO: ${estoque} unidades`);
+          unidadesDisponiveis = resultadoEstoque.mensagem;
+          console.log(`🎉 ESTOQUE ENCONTRADO: ${estoque} unidades`);
         }
       } else {
-        console.log('⚠️ Mensagem de estoque não capturada');
+        console.log('⚠️ Mensagem de estoque não encontrada');
+        
+        // Debug: ver o que tem na página
+        const pageContent = await this.page.evaluate(() => {
+          return {
+            url: window.location.href,
+            hasErrorContainer: !!document.querySelector('div.AddToCartError__container___sqVVF'),
+            allText: document.body.textContent.substring(0, 1000)
+          };
+        });
+        console.log('🔍 Debug página:', pageContent);
       }
 
       return {
         produtoId,
         titulo: infoProduto.titulo,
         preco: infoProduto.preco,
-        estoque: estoque !== null ? estoque : null,
-        disponivel: estoque > 0,
-        mensagem: mensagemEstoque,
-        timestamp: new Date().toISOString()
+        estoque_disponivel: estoque,
+        unidades_disponiveis: unidadesDisponiveis,
+        pode_comprar: estoque > 0,
+        disponivel: estoque !== null && estoque > 0,
+        mensagem_original: resultadoEstoque.mensagem
       };
 
     } catch (error) {
