@@ -59,28 +59,24 @@ class QueenBooksStockChecker {
     try {
       console.log('🔐 Fazendo login via página do produto...');
       
-      // Navegar para um produto qualquer
-      const urlProduto = produtoId ? 
-        `${this.baseUrl}/produtos/${produtoId}` : 
-        `${this.baseUrl}/produtos/177776741`; // Produto padrão para login
-      
+      // Navegar para o produto específico
+      const urlProduto = `${this.baseUrl}/produtos/${produtoId}`;
       console.log(`📄 Acessando: ${urlProduto}`);
+      
       await this.page.goto(urlProduto, { 
         waitUntil: 'networkidle0',
         timeout: 30000 
       });
 
-      // Aguardar página carregar
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Procurar o botão "ACESSE PARA COMPRAR"
+      // Procurar especificamente o botão "ACESSE PARA COMPRAR"
       const botaoAcesso = await this.page.evaluate(() => {
         const buttons = Array.from(document.querySelectorAll('button'));
-        const btn = buttons.find(b => 
-          b.textContent.includes('ACESSE PARA COMPRAR') || 
-          b.classList.contains('AddToCartContainer__buyButtonNotAuthenticated___DPNjB')
+        return buttons.find(btn => 
+          btn.textContent.includes('ACESSE PARA COMPRAR') &&
+          btn.className.includes('AddToCartContainer__buyButtonNotAuthenticated')
         );
-        return btn ? true : false;
       });
 
       if (!botaoAcesso) {
@@ -89,110 +85,88 @@ class QueenBooksStockChecker {
         return true;
       }
 
-      // Clicar no botão "ACESSE PARA COMPRAR"
-      console.log('🖱️ Clicando em "ACESSE PARA COMPRAR"...');
+      console.log('🖱️ Clicando no botão "ACESSE PARA COMPRAR"...');
+      
+      // Clicar no botão específico
       await this.page.evaluate(() => {
         const buttons = Array.from(document.querySelectorAll('button'));
-        const btn = buttons.find(b => 
-          b.textContent.includes('ACESSE PARA COMPRAR') || 
-          b.classList.contains('AddToCartContainer__buyButtonNotAuthenticated___DPNjB')
+        const btnAcesso = buttons.find(btn => 
+          btn.textContent.includes('ACESSE PARA COMPRAR') &&
+          btn.className.includes('AddToCartContainer__buyButtonNotAuthenticated')
         );
-        if (btn) btn.click();
+        if (btnAcesso) {
+          btnAcesso.click();
+        }
       });
 
-      // Aguardar redirecionamento para página de login
-      await this.page.waitForNavigation({ waitUntil: 'networkidle0' });
+      // Aguardar redirecionamento para /entrar
+      console.log('⏳ Aguardando redirecionamento para página de login...');
+      await this.page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 10000 });
+      
+      const urlAtual = this.page.url();
+      console.log(`� URL atual: ${urlAtual}`);
+      
+      if (!urlAtual.includes('/entrar')) {
+        throw new Error('Não redirecionou para página de login');
+      }
+
+      console.log('✅ Redirecionou para página de login!');
+
+      // Aguardar campos de login estarem disponíveis
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Agora fazer o login
-      console.log(`📧 Email: ${this.username}`);
+      // Preencher formulário de login
+      console.log('🔍 Procurando campos de login na página dedicada...');
       
-      // Tentar múltiplos seletores para o campo de email
-      const emailSelectors = [
-        'input[type="email"]',
-        'input[placeholder*="mail" i]',
-        'input.LoginForm__input___agORS[type="email"]',
-        'input[name="email"]'
-      ];
+      const emailInput = await this.page.$('input[type="email"]') || 
+                        await this.page.$('input[name="email"]') ||
+                        await this.page.$('input[placeholder*="email"]');
+      
+      const senhaInput = await this.page.$('input[type="password"]') ||
+                        await this.page.$('input[name="password"]') ||
+                        await this.page.$('input[name="senha"]');
 
-      let emailInput = null;
-      for (const selector of emailSelectors) {
-        emailInput = await this.page.$(selector);
-        if (emailInput) {
-          console.log(`✅ Campo email encontrado: ${selector}`);
-          break;
-        }
+      if (!emailInput || !senhaInput) {
+        throw new Error('Campos de login não encontrados');
       }
 
-      if (!emailInput) {
-        throw new Error('Campo de email não encontrado');
-      }
+      // Limpar e preencher campos
+      await emailInput.click({ clickCount: 3 });
+      await emailInput.type(this.username, { delay: 100 });
+      console.log('✅ Email preenchido na página de login');
 
-      // Preencher email
-      await emailInput.click();
-      await this.page.keyboard.type(this.username, { delay: 100 });
-
-      // Tentar múltiplos seletores para o campo de senha
-      const senhaSelectors = [
-        'input[type="password"]',
-        'input[placeholder*="senha" i]',
-        'input.LoginForm__input___agORS[type="password"]',
-        'input[name="password"]'
-      ];
-
-      let senhaInput = null;
-      for (const selector of senhaSelectors) {
-        senhaInput = await this.page.$(selector);
-        if (senhaInput) {
-          console.log(`✅ Campo senha encontrado: ${selector}`);
-          break;
-        }
-      }
-
-      if (!senhaInput) {
-        throw new Error('Campo de senha não encontrado');
-      }
-
-      // Preencher senha
-      await senhaInput.click();
-      await this.page.keyboard.type(this.password, { delay: 100 });
+      await senhaInput.click({ clickCount: 3 });
+      await senhaInput.type(this.password, { delay: 100 });
+      console.log('✅ Senha preenchida na página de login');
 
       // Submeter formulário
-      console.log('📤 Submetendo formulário...');
+      console.log('🚀 Submetendo login...');
+      await this.page.keyboard.press('Enter');
       
-      // Tentar encontrar botão de submit
-      const submitButton = await this.page.$('button[type="submit"]') || 
-                          await this.page.$('button:contains("Entrar")') ||
-                          await this.page.$('button:contains("LOGIN")');
-      
-      if (submitButton) {
-        await submitButton.click();
-      } else {
-        // Se não encontrar botão, pressionar Enter
-        await this.page.keyboard.press('Enter');
-      }
-
-      // Aguardar login processar
+      // Aguardar processamento do login
+      console.log('⏳ Aguardando login processar...');
       await new Promise(resolve => setTimeout(resolve, 5000));
-
-      // Verificar se voltou para a página do produto ou está logado
-      const urlAtual = this.page.url();
-      if (urlAtual.includes('/produtos/') || !urlAtual.includes('/entrar')) {
-        console.log('✅ Login realizado com sucesso!');
-        this.authenticated = true;
-        return true;
-      } else {
-        throw new Error('Login pode ter falhado - ainda na página de login');
+      
+      // Verificar se o login foi bem-sucedido
+      const urlAposLogin = this.page.url();
+      console.log(`🔍 URL após login: ${urlAposLogin}`);
+      
+      if (urlAposLogin.includes('/entrar')) {
+        throw new Error('Login falhou - ainda na página de login');
       }
+
+      this.authenticated = true;
+      console.log('✅ Login via produto realizado com sucesso!');
+      return true;
 
     } catch (error) {
-      console.error('❌ Erro no login:', error.message);
+      console.error('❌ Erro no login via produto:', error.message);
+      this.loginTentativas++;
       
-      // Tentar login direto como fallback
-      if (this.loginTentativas < 2) {
-        this.loginTentativas++;
-        console.log('🔄 Tentando login direto como fallback...');
-        return await this.fazerLoginDireto();
+      if (this.loginTentativas < 3) {
+        console.log(`🔄 Tentativa ${this.loginTentativas + 1} de login...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return this.fazerLoginViaProduto(produtoId);
       }
       
       throw error;
