@@ -299,12 +299,54 @@ class QueenBooksStockChecker {
       console.log(`📚 Produto: ${infoProduto.titulo || 'Sem título'}`);
       console.log(`💰 Preço: ${infoProduto.preco || 'Não disponível'}`);
 
-      // Verificar se tem campo de quantidade
-      const campoQuantidade = await this.page.$('input[type="number"][placeholder="0"]') ||
-                              await this.page.$('input[type="number"]');
+      // Verificar se tem campo de quantidade - seletores mais amplos
+      const campoQuantidade = await this.page.$('input[placeholder="0"]') ||
+                              await this.page.$('input[type="number"]') ||
+                              await this.page.$('input[class*="quantity"]') ||
+                              await this.page.$('input[class*="Quantity"]') ||
+                              await this.page.$('input[name*="quantity"]') ||
+                              await this.page.$('.AddToCartContainer input[type="number"]');
+      
+      // Debug: Listar todos os inputs para encontrar o correto
+      const todosInputs = await this.page.evaluate(() => {
+        const inputs = Array.from(document.querySelectorAll('input'));
+        return inputs.map(input => ({
+          type: input.type,
+          placeholder: input.placeholder,
+          name: input.name,
+          className: input.className,
+          value: input.value,
+          visible: input.offsetParent !== null
+        }));
+      });
+      
+      console.log('🔍 Inputs encontrados:', JSON.stringify(todosInputs, null, 2));
       
       if (!campoQuantidade) {
-        console.log('⚠️ Campo de quantidade não encontrado - produto indisponível');
+        console.log('⚠️ Campo de quantidade não encontrado - verificando se produto está disponível...');
+        
+        // Verificar se existe botão de comprar (produto disponível mas sem campo visível)
+        const temBotaoComprar = await this.page.evaluate(() => {
+          const buttons = Array.from(document.querySelectorAll('button'));
+          return buttons.some(btn => 
+            btn.textContent.toUpperCase().includes('COMPRAR') &&
+            !btn.textContent.includes('ACESSE') &&
+            !btn.disabled
+          );
+        });
+        
+        if (temBotaoComprar) {
+          console.log('✅ Produto disponível, mas sem campo de quantidade visível - assumindo estoque limitado');
+          return {
+            produtoId,
+            titulo: infoProduto.titulo,
+            preco: infoProduto.preco,
+            estoque: 1, // Assume que tem pelo menos 1 se tem botão comprar
+            disponivel: true,
+            observacao: 'Estoque não verificável - produto disponível'
+          };
+        }
+        
         return {
           produtoId,
           titulo: infoProduto.titulo,
