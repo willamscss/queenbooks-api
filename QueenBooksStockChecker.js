@@ -15,12 +15,16 @@ class QueenBooksStockChecker {
   async init() {
     console.log('🚀 Iniciando QueenBooks Stock Checker...');
     
-    // Detectar Chrome automaticamente no Railway
-    let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    if (!executablePath && process.env.NODE_ENV === 'production') {
-      // Railway/Docker detection
-      executablePath = undefined; // Usar Puppeteer bundled
+    // Auto-detectar executável Chrome no Railway/Docker
+    let executablePath;
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    } else {
+      // Usar bundled Chromium do Puppeteer
+      executablePath = undefined;
     }
+    
+    console.log('🔍 Chrome path:', executablePath || 'bundled Chromium');
     
     this.browser = await puppeteer.launch({
       headless: this.headless,
